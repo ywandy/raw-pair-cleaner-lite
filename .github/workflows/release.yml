@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            runner: macos-14
+            tauri_target: aarch64-apple-darwin
+            bundles: app,dmg
+          - platform: macos-x64
+            runner: macos-13
+            tauri_target: x86_64-apple-darwin
+            bundles: app,dmg
+          - platform: windows-x64
+            runner: windows-2025
+            tauri_target: x86_64-pc-windows-msvc
+            bundles: nsis
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Setup Rust target
+        run: rustup target add ${{ matrix.tauri_target }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        run: pnpm test
+
+      - name: Release gate
+        run: pnpm release:check
+
+      - name: Build sidecar
+        env:
+          TAURI_TARGET: ${{ matrix.tauri_target }}
+        run: pnpm build:sidecar
+
+      - name: Stage sidecar
+        env:
+          TAURI_TARGET: ${{ matrix.tauri_target }}
+        run: pnpm stage:sidecar
+
+      - name: Build Tauri updater bundle
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: pnpm tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.updater.conf.json
+
+      - name: Collect release artifacts
+        run: pnpm collect:release -- --root src-tauri/target/${{ matrix.tauri_target }}/release/bundle --out dist-release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.platform }}
+          path: dist-release/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-assets-*
+          merge-multiple: true
+          path: release-artifacts
+
+      - name: Generate latest.json
+        env:
+          RAW_PAIR_UPDATE_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+        run: pnpm latest:updater -- --artifacts release-artifacts --out release-artifacts/latest.json --version "${GITHUB_REF_NAME#v}"
+
+      - name: Validate latest.json
+        run: pnpm release:check -- --latest-path release-artifacts/latest.json
+
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes "Internal beta release."
+          gh release upload "$GITHUB_REF_NAME" release-artifacts/* --clobber

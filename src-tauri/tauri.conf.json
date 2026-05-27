@@ -1,0 +1,55 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RAW Pair Cleaner",
+  "version": "0.1.0-beta.1",
+  "identifier": "com.ywandy.rawpaircleaner.lite",
+  "build": {
+    "beforeDevCommand": "pnpm dev:web",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build:web",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "RAW Pair Cleaner Lite",
+        "width": 1200,
+        "height": 720,
+        "minWidth": 1200,
+        "minHeight": 720
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "externalBin": [
+      "binaries/raw-pair-sidecar"
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "hardenedRuntime": false
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBQjBFNDkyMEY1QzQzQjYKUldTMlExd1BrdVN3dXRobW9TS3h2QTBlMG80dVZQQ281bms4SzRNakVTRDBxWlRBY0FpTGRUU3kK",
+      "endpoints": [
+        "https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}
