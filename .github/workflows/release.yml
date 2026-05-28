@@ -13,11 +13,20 @@ permissions:
 
 jobs:
   build:
-    name: Build macOS arm64
-    runs-on: macos-14
-    env:
-      TAURI_TARGET: aarch64-apple-darwin
-      TAURI_BUNDLES: app,dmg
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            runner: macos-14
+            tauri_target: aarch64-apple-darwin
+            bundles: app,dmg
+          - platform: macos-x64
+            runner: macos-13
+            tauri_target: x86_64-apple-darwin
+            bundles: app,dmg
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,7 +43,7 @@ jobs:
           cache: pnpm
 
       - name: Setup Rust target
-        run: rustup target add ${{ env.TAURI_TARGET }}
+        run: rustup target add ${{ matrix.tauri_target }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,12 +56,12 @@ jobs:
 
       - name: Build sidecar
         env:
-          TAURI_TARGET: ${{ env.TAURI_TARGET }}
+          TAURI_TARGET: ${{ matrix.tauri_target }}
         run: pnpm build:sidecar
 
       - name: Stage sidecar
         env:
-          TAURI_TARGET: ${{ env.TAURI_TARGET }}
+          TAURI_TARGET: ${{ matrix.tauri_target }}
         run: pnpm stage:sidecar
 
       - name: Validate updater signing key
@@ -68,15 +77,15 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --target ${{ env.TAURI_TARGET }} --bundles ${{ env.TAURI_BUNDLES }} --config src-tauri/tauri.updater.conf.json
+        run: pnpm tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.updater.conf.json
 
       - name: Collect release artifacts
-        run: pnpm collect:release -- --root src-tauri/target/${{ env.TAURI_TARGET }}/release/bundle --out dist-release
+        run: pnpm collect:release -- --root src-tauri/target/${{ matrix.tauri_target }}/release/bundle --out dist-release
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-assets-macos-arm64
+          name: release-assets-${{ matrix.platform }}
           path: dist-release/*
           if-no-files-found: error
 
@@ -111,7 +120,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: release-assets-macos-arm64
+          pattern: release-assets-*
+          merge-multiple: true
           path: release-artifacts
 
       - name: Generate latest.json
