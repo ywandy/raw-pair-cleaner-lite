@@ -1,16 +1,17 @@
 # Internal Release Checklist
 
-This checklist tracks PR-08: multi-platform builds and internal beta release.
-PR-09 production distribution gates are tracked in
-`docs/PRODUCTION_DISTRIBUTION.md`.
+This checklist tracks the internal beta release loop. The current CI release
+scope is macOS arm64 only; macOS x64 and Windows remain deferred until the Apple
+Silicon update loop is proven. PR-09 production distribution gates are tracked
+in `docs/PRODUCTION_DISTRIBUTION.md`.
 
 ## Build Matrix
 
 | Platform | Runner | Tauri target | Status |
 |---|---|---|---|
-| macOS arm64 | `macos-14` | `aarch64-apple-darwin` | Local build and smoke verified |
-| macOS x64 | `macos-13` | `x86_64-apple-darwin` | CI configured, physical install pending |
-| Windows x64 | `windows-2025` | `x86_64-pc-windows-msvc` | CI configured, physical install pending |
+| macOS arm64 | `macos-14` | `aarch64-apple-darwin` | CI build configured for `main`, manual, and `v*` tag runs; local build and smoke verified |
+| macOS x64 | deferred | `x86_64-apple-darwin` | Deferred until macOS arm64 update loop is proven |
+| Windows x64 | deferred | `x86_64-pc-windows-msvc` | Deferred until macOS arm64 update loop is proven |
 | Linux x64 | not in release matrix | `x86_64-unknown-linux-gnu` | Experimental only; Trash behavior not committed |
 
 ## Local macOS arm64 Evidence
@@ -71,16 +72,36 @@ For macOS ad-hoc builds:
    - Settings persist after restart.
    - Check for updates reports the expected state for the current release channel.
 
+## GitHub Release Flow
+
+The release workflow has two modes:
+
+1. `main` push or manual `workflow_dispatch` builds signed macOS arm64 updater
+   assets and uploads them as GitHub Actions artifacts.
+2. `v*` tag push builds the same assets, validates the tag version against all
+   project version sources, generates `latest.json`, creates a formal GitHub
+   Release, and uploads the assets.
+
+The app reads updates from:
+
+```txt
+https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
+```
+
+Only tag-created formal releases affect this endpoint. Actions artifacts from
+ordinary `main` pushes are build evidence only and are not visible to updater
+clients.
+
 ## Pending PR-08 Evidence
 
-These must be filled from CI runs or physical machines before considering PR-08
-fully accepted:
+These must be filled from CI runs or physical machines before considering the
+current macOS arm64 release loop accepted:
 
 | Platform | Install opens | Scan | Trash | Logs | Settings | Updater check | Signed update install |
 |---|---|---|---|---|---|---|---|
 | macOS arm64 | pending tester pass | local sidecar smoke | local sidecar smoke | local sidecar smoke | local sidecar smoke | pending release | pending beta.1 -> beta.2 |
-| macOS x64 | pending | pending | pending | pending | pending | pending | pending |
-| Windows x64 | pending | pending | pending | pending | pending | pending | pending |
+| macOS x64 | deferred | deferred | deferred | deferred | deferred | deferred | deferred |
+| Windows x64 | deferred | deferred | deferred | deferred | deferred | deferred | deferred |
 
 Signed update install and tamper rejection require two published releases:
 

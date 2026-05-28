@@ -2,32 +2,22 @@ name: Release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   build:
-    name: Build ${{ matrix.platform }}
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-arm64
-            runner: macos-14
-            tauri_target: aarch64-apple-darwin
-            bundles: app,dmg
-          - platform: macos-x64
-            runner: macos-13
-            tauri_target: x86_64-apple-darwin
-            bundles: app,dmg
-          - platform: windows-x64
-            runner: windows-2025
-            tauri_target: x86_64-pc-windows-msvc
-            bundles: nsis
+    name: Build macOS arm64
+    runs-on: macos-14
+    env:
+      TAURI_TARGET: aarch64-apple-darwin
+      TAURI_BUNDLES: app,dmg
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +34,7 @@ jobs:
           cache: pnpm
 
       - name: Setup Rust target
-        run: rustup target add ${{ matrix.tauri_target }}
+        run: rustup target add ${{ env.TAURI_TARGET }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -57,33 +47,43 @@ jobs:
 
       - name: Build sidecar
         env:
-          TAURI_TARGET: ${{ matrix.tauri_target }}
+          TAURI_TARGET: ${{ env.TAURI_TARGET }}
         run: pnpm build:sidecar
 
       - name: Stage sidecar
         env:
-          TAURI_TARGET: ${{ matrix.tauri_target }}
+          TAURI_TARGET: ${{ env.TAURI_TARGET }}
         run: pnpm stage:sidecar
+
+      - name: Validate updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is required for signed updater builds."
+            exit 1
+          fi
 
       - name: Build Tauri updater bundle
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: pnpm tauri build --target ${{ matrix.tauri_target }} --bundles ${{ matrix.bundles }} --config src-tauri/tauri.updater.conf.json
+        run: pnpm tauri build --target ${{ env.TAURI_TARGET }} --bundles ${{ env.TAURI_BUNDLES }} --config src-tauri/tauri.updater.conf.json
 
       - name: Collect release artifacts
-        run: pnpm collect:release -- --root src-tauri/target/${{ matrix.tauri_target }}/release/bundle --out dist-release
+        run: pnpm collect:release -- --root src-tauri/target/${{ env.TAURI_TARGET }}/release/bundle --out dist-release
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-assets-${{ matrix.platform }}
+          name: release-assets-macos-arm64
           path: dist-release/*
           if-no-files-found: error
 
   publish:
     name: Publish GitHub Release
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -103,24 +103,33 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate tag version
+        run: |
+          RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          pnpm release:check -- --expected-version "$RELEASE_VERSION"
+
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: release-assets-*
-          merge-multiple: true
+          name: release-assets-macos-arm64
           path: release-artifacts
 
       - name: Generate latest.json
         env:
           RAW_PAIR_UPDATE_BASE_URL: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
-        run: pnpm latest:updater -- --artifacts release-artifacts --out release-artifacts/latest.json --version "${GITHUB_REF_NAME#v}"
+        run: |
+          RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          pnpm latest:updater -- --artifacts release-artifacts --out release-artifacts/latest.json --version "$RELEASE_VERSION"
 
       - name: Validate latest.json
-        run: pnpm release:check -- --latest-path release-artifacts/latest.json
+        run: |
+          RELEASE_VERSION="${GITHUB_REF_NAME#v}"
+          pnpm release:check -- --latest-path release-artifacts/latest.json --expected-version "$RELEASE_VERSION"
 
       - name: Publish release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "$GITHUB_REF_NAME" --notes "Internal beta release."
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --latest --title "$GITHUB_REF_NAME" --notes "Internal beta release."
+          gh release edit "$GITHUB_REF_NAME" --draft=false --prerelease=false --latest
           gh release upload "$GITHUB_REF_NAME" release-artifacts/* --clobber

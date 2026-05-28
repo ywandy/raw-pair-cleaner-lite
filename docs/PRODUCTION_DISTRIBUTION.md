@@ -6,8 +6,10 @@ promoted beyond internal beta builds.
 
 ## Current Status
 
-The project is ready for internal, ad-hoc beta packaging only. Public production
-distribution remains blocked by external credentials and real platform evidence:
+The project is ready for internal, ad-hoc beta packaging only. The GitHub
+release workflow currently builds macOS arm64 first; macOS x64 and Windows are
+deferred until that update loop is proven. Public production distribution
+remains blocked by external credentials and real platform evidence:
 
 - Apple Developer Program access.
 - Developer ID Application signing identity.

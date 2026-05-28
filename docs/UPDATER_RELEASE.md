@@ -55,8 +55,10 @@ RAW_PAIR_UPDATE_BASE_URL="https://github.com/ywandy/raw-pair-cleaner-lite/releas
 pnpm latest:updater -- --artifacts dist-release --out dist-release/latest.json
 ```
 
-The release workflow performs this per platform and publishes `latest.json` with
-the release assets.
+The release workflow currently builds only macOS arm64. Pushes to `main` and
+manual workflow runs upload signed macOS arm64 assets as GitHub Actions
+artifacts only. Pushing a `v*` tag builds the same assets, generates
+`latest.json`, validates it, and uploads the assets to a formal GitHub Release.
 
 Before publishing, run the local release gate against the generated manifest:
 
@@ -72,6 +74,12 @@ The app checks:
 https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
 ```
 
-For the beta.1 to beta.2 test, publish the beta.2 updater artifact and generated
-`latest.json` to a GitHub Release. A full install test still needs two released
-versions: an installed beta.1 client and a signed beta.2 update.
+Because the endpoint uses GitHub's latest release, ordinary `main` pushes and
+manual builds are not visible to updater clients. Only a formal release created
+from a `v*` tag can change the version seen by the app.
+
+For the beta.1 to beta.2 test, push a `v0.1.0-beta.2` tag after all version
+sources are updated to `0.1.0-beta.2`. The release gate checks that the tag
+version, project version sources, and generated `latest.json` version match. A
+full install test still needs two released versions: an installed beta.1 client
+and a signed beta.2 update.

@@ -8,7 +8,8 @@ import {
   findForbiddenHardDeleteCalls,
   readVersionSources,
   validateLatestJson,
-  validateVersionSync
+  validateVersionSync,
+  runReleaseGate
 } from "./release-gate.mjs";
 
 describe("release gate checks", () => {
@@ -44,6 +45,56 @@ describe("release gate checks", () => {
     expect(validateVersionSync(sources)).toEqual([
       "Version mismatch: package.json=0.1.0-beta.2, shared/constants.ts=0.1.0-beta.1"
     ]);
+  });
+
+  it("accepts an expected release version when all version sources match it", async () => {
+    const root = await createProjectFixture({
+      versions: {
+        packageJson: "0.1.0-beta.2",
+        sidecarPackageJson: "0.1.0-beta.2",
+        sharedConstants: "0.1.0-beta.2",
+        tauriConf: "0.1.0-beta.2",
+        cargoToml: "0.1.0-beta.2"
+      }
+    });
+
+    await writeRequiredDocs(root);
+
+    await expect(
+      runReleaseGate({
+        rootDir: root,
+        expectedVersion: "0.1.0-beta.2",
+        hardDeleteScanPaths: []
+      })
+    ).resolves.toMatchObject({
+      issues: []
+    });
+  });
+
+  it("reports when an expected release version differs from the synced project version", async () => {
+    const root = await createProjectFixture({
+      versions: {
+        packageJson: "0.1.0-beta.2",
+        sidecarPackageJson: "0.1.0-beta.2",
+        sharedConstants: "0.1.0-beta.2",
+        tauriConf: "0.1.0-beta.2",
+        cargoToml: "0.1.0-beta.2"
+      }
+    });
+
+    await writeRequiredDocs(root);
+
+    await expect(
+      runReleaseGate({
+        rootDir: root,
+        expectedVersion: "0.1.0-beta.3",
+        hardDeleteScanPaths: []
+      })
+    ).resolves.toMatchObject({
+      issues: [
+        "Expected release version 0.1.0-beta.3 does not match version sources: package.json=0.1.0-beta.2, sidecar/package.json=0.1.0-beta.2, shared/constants.ts=0.1.0-beta.2, src-tauri/tauri.conf.json=0.1.0-beta.2, src-tauri/Cargo.toml=0.1.0-beta.2"
+      ]
+    });
   });
 
   it("finds runtime hard-delete filesystem APIs but ignores test cleanup files", async () => {
@@ -147,4 +198,11 @@ async function createProjectFixture({ versions }) {
   await writeFile(path.join(root, "src-tauri", "tauri.conf.json"), JSON.stringify({ version: versions.tauriConf }), "utf8");
   await writeFile(path.join(root, "src-tauri", "Cargo.toml"), `[package]\nversion = "${versions.cargoToml}"\n`, "utf8");
   return root;
+}
+
+async function writeRequiredDocs(root) {
+  await mkdir(path.join(root, "docs"), { recursive: true });
+  await writeFile(path.join(root, "docs", "UPDATER_RELEASE.md"), "# Updater\n", "utf8");
+  await writeFile(path.join(root, "docs", "INTERNAL_RELEASE_CHECKLIST.md"), "# Checklist\n", "utf8");
+  await writeFile(path.join(root, "docs", "PRODUCTION_DISTRIBUTION.md"), "# Distribution\n", "utf8");
 }

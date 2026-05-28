@@ -77,6 +77,15 @@ export function validateVersionSync(sources) {
   ];
 }
 
+export function validateExpectedVersion(sources, expectedVersion) {
+  if (!expectedVersion) return [];
+  if (sources.every((source) => source.version === expectedVersion)) return [];
+
+  return [
+    `Expected release version ${expectedVersion} does not match version sources: ${formatVersionSources(sources)}`
+  ];
+}
+
 export async function findForbiddenHardDeleteCalls(rootDir = process.cwd(), searchPaths = DEFAULT_HARD_DELETE_SCAN_PATHS) {
   const findings = [];
   for (const searchPath of searchPaths) {
@@ -152,6 +161,7 @@ export async function runReleaseGate(options = {}) {
   const issues = [];
   const sources = await readVersionSources(rootDir);
   issues.push(...validateVersionSync(sources));
+  issues.push(...validateExpectedVersion(sources, options.expectedVersion));
 
   if (options.versionOnly) {
     return { issues, sources };
@@ -164,7 +174,7 @@ export async function runReleaseGate(options = {}) {
     issues.push(`Forbidden hard-delete API: ${finding.file}:${finding.line} ${finding.match}`);
   }
 
-  issues.push(...(await validateLatestJsonWhenPresent(rootDir, options.latestPath, sources[0]?.version)));
+  issues.push(...(await validateLatestJsonWhenPresent(rootDir, options.latestPath, options.expectedVersion ?? sources[0]?.version)));
 
   return { issues, sources, hardDeleteFindings };
 }
@@ -275,6 +285,10 @@ async function exists(filePath) {
 
 function normalizePath(filePath) {
   return filePath.split(path.sep).join("/");
+}
+
+function formatVersionSources(sources) {
+  return sources.map((source) => `${source.name}=${source.version}`).join(", ");
 }
 
 function parseArgs(argv) {
