@@ -13,7 +13,7 @@ describe("release workflow", () => {
     expect(workflow).toContain("name: release-assets-${{ matrix.platform }}");
 
     expect(workflow).toContain("platform: macos-x64");
-    expect(workflow).toContain("runner: macos-13");
+    expect(workflow).toContain("runner: macos-15-intel");
     expect(workflow).toContain("tauri_target: x86_64-apple-darwin");
   });
 

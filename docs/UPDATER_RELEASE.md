@@ -55,8 +55,8 @@ RAW_PAIR_UPDATE_BASE_URL="https://github.com/ywandy/raw-pair-cleaner-lite/releas
 pnpm latest:updater -- --artifacts dist-release --out dist-release/latest.json
 ```
 
-The release workflow currently builds only macOS arm64. Pushes to `main` and
-manual workflow runs upload signed macOS arm64 assets as GitHub Actions
+The release workflow currently builds macOS arm64 and macOS x64. Pushes to
+`main` and manual workflow runs upload signed macOS assets as GitHub Actions
 artifacts only. Pushing a `v*` tag builds the same assets, generates
 `latest.json`, validates it, and uploads the assets to a formal GitHub Release.
 
