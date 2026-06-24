@@ -53,7 +53,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Test
+        if: matrix.platform != 'windows-x64'
         run: pnpm test
+
+      - name: Test Windows package path
+        if: matrix.platform == 'windows-x64'
+        run: |
+          pnpm vitest run src scripts --exclude scripts/release-gate.test.mjs
+          pnpm --filter ./sidecar test
 
       - name: Release gate
         run: pnpm release:check
