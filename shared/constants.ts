@@ -3,7 +3,7 @@ import { SIDECAR_EXTENSIONS } from "./fileExtensions.js";
 
 export const APP_NAME = "RAW Pair Cleaner";
 export const APP_TITLE = "RAW Pair Cleaner / 底片清理器";
-export const APP_VERSION = "0.1.0-beta.4";
+export const APP_VERSION = "0.1.0-beta.5";
 export const APP_AUTHOR = {
   name: "ywandy",
   email: "ywandy@users.noreply.github.com",
