@@ -69,3 +69,7 @@ export function getExecutableSuffix() {
 export function getPnpmCommand(platform = process.platform) {
   return platform === "win32" ? "pnpm.cmd" : "pnpm";
 }
+
+export function getPnpmSpawnOptions(platform = process.platform) {
+  return platform === "win32" ? { shell: true } : {};
+}

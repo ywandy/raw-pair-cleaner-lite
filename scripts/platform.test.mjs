@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getExecutableSuffixForTarget,
   getPnpmCommand,
+  getPnpmSpawnOptions,
   getTargetConfig,
   getTargetConfigForTriple
 } from "./platform.mjs";
@@ -47,9 +48,12 @@ describe("platform target helpers", () => {
     expect(getExecutableSuffixForTarget("aarch64-apple-darwin")).toBe("");
   });
 
-  it("uses the Windows command shim for pnpm when spawning without a shell", () => {
+  it("uses a shell when spawning the Windows pnpm command shim", () => {
     expect(getPnpmCommand("win32")).toBe("pnpm.cmd");
+    expect(getPnpmSpawnOptions("win32")).toEqual({ shell: true });
     expect(getPnpmCommand("darwin")).toBe("pnpm");
+    expect(getPnpmSpawnOptions("darwin")).toEqual({});
     expect(getPnpmCommand("linux")).toBe("pnpm");
+    expect(getPnpmSpawnOptions("linux")).toEqual({});
   });
 });
