@@ -104,7 +104,7 @@ function getUpdateMessage(state: UpdateState, info?: UpdateInfo): string {
   if (state.status === "checking") return "正在检查是否有新版本。";
   if (state.status === "available" && info) return `发现新版本 ${info.version}，可下载并安装。`;
   if (state.status === "downloading") return "正在下载更新，请稍候。";
-  if (state.status === "ready") return "更新已下载，重启应用后生效。";
+  if (state.status === "ready") return "更新已下载，可安装并重启。";
   if (state.status === "not-available") return "当前已是最新版本。";
   if (state.status === "error") return state.error || "检查更新失败，请稍后重试。";
   return "可手动检查更新；启动自动检查可在设置中调整。";

@@ -53,7 +53,7 @@ export function UpdateDialog({ open, info, state, onCancel, onDownload, onInstal
             {(state.status === "downloading" || state.status === "ready" || state.status === "installing") && (
             <motion.div className="space-y-2" initial={{ opacity: 0, y: reduced ? 0 : 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: reduced ? 0 : -3 }} transition={{ duration: reduced ? 0.01 : 0.16, ease: "easeOut" }}>
               <div className="flex justify-between type-caption text-[var(--color-muted)]">
-                <span>{state.status === "ready" ? "更新已下载，重启后生效。" : state.status === "installing" ? "正在准备重启安装" : "正在下载更新"}</span>
+                <span>{state.status === "ready" ? "更新已下载，可安装并重启。" : state.status === "installing" ? "正在静默安装，完成后自动重启" : "正在下载更新"}</span>
                 <span>{percent !== undefined ? `${percent}%` : formatBytes(state.downloaded ?? 0)}</span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-[var(--color-accent-blue-soft)]">
@@ -79,7 +79,7 @@ export function UpdateDialog({ open, info, state, onCancel, onDownload, onInstal
           {state.status === "ready" ? (
             <motion.button className="btn btn-blue" onClick={onInstall} {...getPressMotion(reduced)}>
               <DownloadCloud className="h-4 w-4" />
-              重启后生效
+              安装并重启
             </motion.button>
           ) : (
             <motion.button

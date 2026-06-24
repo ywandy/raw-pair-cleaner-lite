@@ -218,8 +218,8 @@ function getUpdateStatusMessage(state: UpdateState, info?: UpdateInfo): string {
   if (state.status === "available" && info) return `发现新版本 ${info.version}，当前版本 ${info.currentVersion}。`;
   if (state.status === "not-available") return "已经是最新版本。";
   if (state.status === "downloading") return info ? `正在下载 ${info.version}。` : "正在下载更新。";
-  if (state.status === "ready") return info ? `${info.version} 已下载，重启后生效。` : "更新已下载，重启后生效。";
-  if (state.status === "installing") return "正在准备重启安装。";
+  if (state.status === "ready") return info ? `${info.version} 已下载，可安装并重启。` : "更新已下载，可安装并重启。";
+  if (state.status === "installing") return "正在静默安装，完成后自动重启。";
   if (state.status === "error") return state.error || "检查更新失败，请稍后重试。";
   return "点击检查后会显示最新版本状态。";
 }

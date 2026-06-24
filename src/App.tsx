@@ -367,7 +367,7 @@ export default function App() {
   async function installUpdate(): Promise<void> {
     if (!updateInfo) return;
     if (scanning || deleting || confirmOpen) {
-      setUpdateState({ status: "error", info: updateInfo, error: "请等待当前扫描或删除操作完成后再重启应用更新。" });
+      setUpdateState({ status: "error", info: updateInfo, error: "请等待当前扫描或删除操作完成后再安装并重启更新。" });
       return;
     }
 
@@ -375,7 +375,11 @@ export default function App() {
     try {
       await api.installUpdate();
     } catch (installError) {
-      setUpdateState({ status: "error", info: updateInfo, error: getErrorMessage(installError) });
+      setUpdateState({
+        status: "error",
+        info: updateInfo,
+        error: `${getErrorMessage(installError)} 如在 Windows 上静默安装失败，请确认当前应用是当前用户安装版本，或手动运行安装包完成更新。`
+      });
     }
   }
 

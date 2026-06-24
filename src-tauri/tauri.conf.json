@@ -49,7 +49,7 @@
         "https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json"
       ],
       "windows": {
-        "installMode": "passive"
+        "installMode": "quiet"
       }
     }
   }
