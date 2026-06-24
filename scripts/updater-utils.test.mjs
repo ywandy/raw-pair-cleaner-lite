@@ -78,4 +78,27 @@ describe("updater latest.json utilities", () => {
       await import("node:fs/promises").then(({ rm }) => rm(root, { recursive: true, force: true }));
     }
   });
+
+  it("rejects duplicate updater artifacts for the same platform", () => {
+    expect(() =>
+      buildLatestJson({
+        version: "0.1.0-beta.2",
+        notes: "Signed update test",
+        pubDate: "2026-05-26T00:00:00.000Z",
+        baseUrl: "https://github.com/ywandy/raw-pair-cleaner-lite/releases/download/v0.1.0-beta.2",
+        artifacts: [
+          {
+            platform: "windows-x86_64",
+            relativePath: "nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.nsis.zip",
+            signature: "nsis-signature"
+          },
+          {
+            platform: "windows-x86_64",
+            relativePath: "msi/RAW Pair Cleaner_0.1.0-beta.2_x64_en-US.msi.zip",
+            signature: "msi-signature"
+          }
+        ]
+      })
+    ).toThrow("Duplicate updater artifacts for platform windows-x86_64");
+  });
 });

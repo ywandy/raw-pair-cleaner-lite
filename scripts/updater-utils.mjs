@@ -30,6 +30,9 @@ export function buildLatestJson({ version, notes, pubDate, baseUrl, artifacts })
 
   const platforms = {};
   for (const artifact of artifacts) {
+    if (platforms[artifact.platform]) {
+      throw new Error(`Duplicate updater artifacts for platform ${artifact.platform}`);
+    }
     platforms[artifact.platform] = {
       signature: artifact.signature,
       url: joinUrl(baseUrl, artifact.relativePath)

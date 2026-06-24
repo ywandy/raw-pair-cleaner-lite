@@ -1,8 +1,8 @@
 # Internal Release Checklist
 
 This checklist tracks the internal beta release loop. The current CI release
-scope is macOS arm64 and macOS x64; Windows remains deferred until the macOS
-update loop is proven. PR-09 production distribution gates are tracked in
+scope is macOS arm64, macOS x64, and Windows x64 via the NSIS updater channel.
+PR-09 production distribution gates are tracked in
 `docs/PRODUCTION_DISTRIBUTION.md`.
 
 ## Build Matrix
@@ -11,7 +11,7 @@ update loop is proven. PR-09 production distribution gates are tracked in
 |---|---|---|---|
 | macOS arm64 | `macos-14` | `aarch64-apple-darwin` | CI build configured for `main`, manual, and `v*` tag runs; local build and smoke verified |
 | macOS x64 | `macos-15-intel` | `x86_64-apple-darwin` | CI build configured for `main`, manual, and `v*` tag runs; physical install pending |
-| Windows x64 | deferred | `x86_64-pc-windows-msvc` | Deferred until macOS arm64 update loop is proven |
+| Windows x64 | `windows-latest` | `x86_64-pc-windows-msvc` | CI build configured for `main`, manual, and `v*` tag runs; NSIS updater channel; physical install and update pending |
 | Linux x64 | not in release matrix | `x86_64-unknown-linux-gnu` | Experimental only; Trash behavior not committed |
 
 ## Local macOS arm64 Evidence
@@ -72,12 +72,21 @@ For macOS ad-hoc builds:
    - Settings persist after restart.
    - Check for updates reports the expected state for the current release channel.
 
+For Windows x64 internal builds:
+
+1. Download the NSIS `.exe` installer from the GitHub Release.
+2. Install into a normal user environment, using a temporary fixture folder first.
+3. Verify directory picker, scan, conflict handling, Trash/Recycling Bin move,
+   delete log generation, settings persistence, and update check.
+4. For signed update testing, install the previous release, publish the next tag,
+   update through the app, relaunch, then verify the packaged sidecar still runs.
+
 ## GitHub Release Flow
 
 The release workflow has two modes:
 
-1. `main` push or manual `workflow_dispatch` builds signed macOS updater
-   assets and uploads them as GitHub Actions artifacts.
+1. `main` push or manual `workflow_dispatch` builds signed macOS and Windows
+   updater assets and uploads them as GitHub Actions artifacts.
 2. `v*` tag push builds the same assets, validates the tag version against all
    project version sources, generates `latest.json`, creates a formal GitHub
    Release, and uploads the assets.
@@ -85,12 +94,13 @@ The release workflow has two modes:
 The app reads updates from:
 
 ```txt
-https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
+https://gh-pxy.ywandy.top/https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
 ```
 
-Only tag-created formal releases affect this endpoint. Actions artifacts from
-ordinary `main` pushes are build evidence only and are not visible to updater
-clients.
+This is the default proxied endpoint derived from the runtime update connection
+prefix. Clearing the prefix in settings checks GitHub directly. Only tag-created
+formal releases affect this endpoint. Actions artifacts from ordinary `main`
+pushes are build evidence only and are not visible to updater clients.
 
 ## Pending PR-08 Evidence
 
@@ -101,14 +111,14 @@ current macOS release loop accepted:
 |---|---|---|---|---|---|---|---|
 | macOS arm64 | pending tester pass | local sidecar smoke | local sidecar smoke | local sidecar smoke | local sidecar smoke | pending release | pending beta.1 -> beta.2 |
 | macOS x64 | pending | pending | pending | pending | pending | pending release | pending beta.1 -> beta.2 |
-| Windows x64 | deferred | deferred | deferred | deferred | deferred | deferred | deferred |
+| Windows x64 | pending | pending | pending | pending | pending | pending release | pending beta.1 -> beta.2 |
 
 Signed update install and tamper rejection require two published releases:
 
 ```txt
 1. Install v0.1.0-beta.1.
 2. Publish v0.1.0-beta.2 updater artifacts and latest.json.
-3. Confirm beta.1 detects beta.2, downloads, installs, relaunches, and sidecar still runs.
+3. Confirm beta.1 detects beta.2, downloads, installs, relaunches, and sidecar still runs on each internal beta platform.
 4. Replace the updater archive with modified bytes while keeping the original signature.
 5. Confirm the updater rejects the tampered package.
 ```

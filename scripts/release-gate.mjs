@@ -101,6 +101,7 @@ export async function findForbiddenHardDeleteCalls(rootDir = process.cwd(), sear
 export async function validateLatestJson(latestPath, options = {}) {
   const issues = [];
   const latest = await readJson(latestPath);
+  const requiredPlatforms = normalizeRequiredPlatforms(options.requiredPlatforms);
 
   if (!latest.version || typeof latest.version !== "string") {
     issues.push("latest.json version is required.");
@@ -118,7 +119,7 @@ export async function validateLatestJson(latestPath, options = {}) {
     issues.push("latest.json must declare at least one platform.");
   }
 
-  for (const requiredPlatform of options.requiredPlatforms ?? []) {
+  for (const requiredPlatform of requiredPlatforms) {
     if (!latest.platforms[requiredPlatform]) {
       issues.push(`latest.json is missing required platform ${requiredPlatform}.`);
     }
@@ -174,7 +175,12 @@ export async function runReleaseGate(options = {}) {
     issues.push(`Forbidden hard-delete API: ${finding.file}:${finding.line} ${finding.match}`);
   }
 
-  issues.push(...(await validateLatestJsonWhenPresent(rootDir, options.latestPath, options.expectedVersion ?? sources[0]?.version)));
+  issues.push(...(await validateLatestJsonWhenPresent(
+    rootDir,
+    options.latestPath,
+    options.expectedVersion ?? sources[0]?.version,
+    options.requiredPlatforms
+  )));
 
   return { issues, sources, hardDeleteFindings };
 }
@@ -183,12 +189,12 @@ export async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
 }
 
-async function validateLatestJsonWhenPresent(rootDir, explicitLatestPath, expectedVersion) {
+async function validateLatestJsonWhenPresent(rootDir, explicitLatestPath, expectedVersion, requiredPlatforms) {
   const latestPath = explicitLatestPath ? path.resolve(rootDir, explicitLatestPath) : path.join(rootDir, "dist-release", "latest.json");
   const distReleaseDir = path.join(rootDir, "dist-release");
 
   if (await exists(latestPath)) {
-    return validateLatestJson(latestPath, { expectedVersion });
+    return validateLatestJson(latestPath, { expectedVersion, requiredPlatforms });
   }
 
   if (!explicitLatestPath && await hasUpdaterSignatures(distReleaseDir)) {
@@ -196,6 +202,18 @@ async function validateLatestJsonWhenPresent(rootDir, explicitLatestPath, expect
   }
 
   return [];
+}
+
+function normalizeRequiredPlatforms(requiredPlatforms) {
+  if (!requiredPlatforms) return [];
+  if (Array.isArray(requiredPlatforms)) return requiredPlatforms.filter(Boolean);
+  if (typeof requiredPlatforms === "string") {
+    return requiredPlatforms
+      .split(",")
+      .map((platform) => platform.trim())
+      .filter(Boolean);
+  }
+  throw new Error("requiredPlatforms must be an array or comma-separated string.");
 }
 
 async function hasUpdaterSignatures(directoryPath) {

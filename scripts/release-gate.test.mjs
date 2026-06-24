@@ -172,6 +172,46 @@ describe("release gate checks", () => {
     ]);
   });
 
+  it("reports required updater platforms missing from latest.json through the release gate", async () => {
+    const root = await createProjectFixture({
+      versions: {
+        packageJson: "0.1.0-beta.2",
+        sidecarPackageJson: "0.1.0-beta.2",
+        sharedConstants: "0.1.0-beta.2",
+        tauriConf: "0.1.0-beta.2",
+        cargoToml: "0.1.0-beta.2"
+      }
+    });
+    await writeRequiredDocs(root);
+    await mkdir(path.join(root, "dist-release"), { recursive: true });
+    await writeFile(
+      path.join(root, "dist-release", "latest.json"),
+      JSON.stringify({
+        version: "0.1.0-beta.2",
+        platforms: {
+          "darwin-aarch64": {
+            signature: "trusted-signature-text",
+            url: "https://github.com/ywandy/raw-pair-cleaner-lite/releases/download/v0.1.0-beta.2/raw-pair-cleaner-lite_0.1.0-beta.2_darwin-aarch64.app.tar.gz"
+          }
+        }
+      }),
+      "utf8"
+    );
+
+    await expect(
+      runReleaseGate({
+        rootDir: root,
+        hardDeleteScanPaths: [],
+        requiredPlatforms: "darwin-aarch64,darwin-x86_64,windows-x86_64"
+      })
+    ).resolves.toMatchObject({
+      issues: [
+        "latest.json is missing required platform darwin-x86_64.",
+        "latest.json is missing required platform windows-x86_64."
+      ]
+    });
+  });
+
   it("reports missing release-readiness documents", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "raw-pair-docs-gate-"));
     await mkdir(path.join(root, "docs"), { recursive: true });

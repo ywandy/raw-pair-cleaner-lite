@@ -30,12 +30,17 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" \
 pnpm build:updater
 ```
 
-This currently produces:
+On macOS this currently produces:
 
 ```txt
 src-tauri/target/release/bundle/macos/RAW Pair Cleaner.app.tar.gz
 src-tauri/target/release/bundle/macos/RAW Pair Cleaner.app.tar.gz.sig
 ```
+
+On Windows x64 CI builds, the release workflow uses the NSIS bundle as the
+updater channel. The generated updater artifact is represented in
+`latest.json` as `windows-x86_64`; MSI artifacts are not part of the current
+internal beta update channel.
 
 ## Generate latest.json
 
@@ -55,31 +60,41 @@ RAW_PAIR_UPDATE_BASE_URL="https://github.com/ywandy/raw-pair-cleaner-lite/releas
 pnpm latest:updater -- --artifacts dist-release --out dist-release/latest.json
 ```
 
-The release workflow currently builds macOS arm64 and macOS x64. Pushes to
-`main` and manual workflow runs upload signed macOS assets as GitHub Actions
-artifacts only. Pushing a `v*` tag builds the same assets, generates
-`latest.json`, validates it, and uploads the assets to a formal GitHub Release.
+The release workflow currently builds macOS arm64, macOS x64, and Windows x64
+NSIS assets. Pushes to `main` and manual workflow runs upload signed internal
+beta assets as GitHub Actions artifacts only. Pushing a `v*` tag builds the same
+assets, generates `latest.json`, validates it, and uploads the assets to a
+formal GitHub Release.
 
 Before publishing, run the local release gate against the generated manifest:
 
 ```bash
-pnpm release:check -- --latest-path dist-release/latest.json
+pnpm release:check -- --latest-path dist-release/latest.json --required-platforms darwin-aarch64,darwin-x86_64,windows-x86_64
 ```
+
+The required platform gate prevents publishing a tag release whose manifest is
+missing one of the internal beta updater targets.
 
 ## Current Endpoint
 
 The app checks:
 
 ```txt
-https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
+https://gh-pxy.ywandy.top/https://github.com/ywandy/raw-pair-cleaner-lite/releases/latest/download/latest.json
 ```
 
-Because the endpoint uses GitHub's latest release, ordinary `main` pushes and
-manual builds are not visible to updater clients. Only a formal release created
-from a `v*` tag can change the version seen by the app.
+The default runtime setting prefixes the canonical GitHub endpoint with the
+release proxy because direct GitHub release downloads can be slow or
+unreachable on some networks. Clearing the update connection prefix in settings
+checks the canonical endpoint directly. In both modes, the endpoint still
+resolves GitHub's latest release, so ordinary `main` pushes and manual builds
+are not visible to updater clients. Only a formal release created from a `v*`
+tag can change the version seen by the app.
 
 For the beta.1 to beta.2 test, push a `v0.1.0-beta.2` tag after all version
 sources are updated to `0.1.0-beta.2`. The release gate checks that the tag
 version, project version sources, and generated `latest.json` version match. A
 full install test still needs two released versions: an installed beta.1 client
-and a signed beta.2 update.
+and a signed beta.2 update. Windows acceptance should use the NSIS installer,
+then confirm settings, scan, Trash, update install, relaunch, and packaged
+sidecar execution after the update.

@@ -7,9 +7,9 @@ promoted beyond internal beta builds.
 ## Current Status
 
 The project is ready for internal, ad-hoc beta packaging only. The GitHub
-release workflow currently builds macOS arm64 and macOS x64 first; Windows is
-deferred until that update loop is proven. Public production distribution
-remains blocked by external credentials and real platform evidence:
+release workflow currently builds macOS arm64, macOS x64, and Windows x64 NSIS
+internal beta assets. Public production distribution remains blocked by
+external credentials and real platform evidence:
 
 - Apple Developer Program access.
 - Developer ID Application signing identity.
@@ -19,10 +19,15 @@ remains blocked by external credentials and real platform evidence:
 - Tampered updater artifact rejection test.
 - Physical macOS x64 and Windows x64 install, scan, Trash, settings, log, and
   update checks.
+- Windows production code-signing and SmartScreen readiness.
 
 Do not advertise the macOS build as smooth for ordinary users until Developer ID
 signing and notarization are proven. Tauri updater signatures verify update
 origin only; they do not replace Apple signing or notarization.
+
+Do not advertise the Windows build as production-ready until installer signing,
+SmartScreen behavior, and real-machine update evidence are proven. The internal
+beta update channel uses NSIS as the single `windows-x86_64` updater artifact.
 
 ## Local Release Gates
 
@@ -41,7 +46,7 @@ After signed updater artifacts are collected and `latest.json` is generated,
 validate the concrete update manifest:
 
 ```bash
-pnpm release:check -- --latest-path dist-release/latest.json
+pnpm release:check -- --latest-path dist-release/latest.json --required-platforms darwin-aarch64,darwin-x86_64,windows-x86_64
 ```
 
 The release gate verifies:
