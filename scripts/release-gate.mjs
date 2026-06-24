@@ -56,6 +56,9 @@ const IGNORED_PATH_PARTS = new Set([
   "node_modules",
   "target"
 ]);
+const FORBIDDEN_FS_METHOD_PATTERN = /\b(?:rm|rmdir|unlink)(?:Sync)?\b/;
+const FORBIDDEN_FS_MEMBER_PATTERN = /\bfs\.(?:rm|rmdir|unlink)(?:Sync)?\s*\(/;
+const FORBIDDEN_RUST_REMOVE_PATTERN = /\b(?:std|tokio)::fs::remove_(?:file|dir|dir_all)\s*\(/;
 
 export async function readVersionSources(rootDir = process.cwd()) {
   const sources = [];
@@ -227,7 +230,7 @@ async function hasUpdaterSignatures(directoryPath) {
 
 function findForbiddenHardDeleteCallsInFile(rootDir, filePath, source) {
   const relativePath = normalizePath(path.relative(rootDir, filePath));
-  const fileHasForbiddenFsBinding = /(?:import\s*\{[^}]*\b(?:rm|rmdir|unlink)(?:Sync)?\b[^}]*\}\s*from\s*["']node:fs(?:\/promises)?["'])|(?:\b(?:require|import)\s*\(\s*["']node:fs(?:\/promises)?["']\s*\))/.test(source);
+  const fileHasForbiddenFsBinding = source.split(/\r?\n/).some(hasForbiddenNodeFsBinding);
   const findings = [];
 
   source.split(/\r?\n/).forEach((lineText, index) => {
@@ -235,10 +238,10 @@ function findForbiddenHardDeleteCallsInFile(rootDir, filePath, source) {
     if (!trimmed || trimmed.startsWith("//") || trimmed.startsWith("*")) return;
 
     const isForbidden =
-      /import\s*\{[^}]*\b(?:rm|rmdir|unlink)(?:Sync)?\b[^}]*\}\s*from\s*["']node:fs(?:\/promises)?["']/.test(trimmed) ||
-      /\bfs\.(?:rm|rmdir|unlink)(?:Sync)?\s*\(/.test(trimmed) ||
+      hasForbiddenNodeFsBinding(trimmed) ||
+      FORBIDDEN_FS_MEMBER_PATTERN.test(trimmed) ||
       (fileHasForbiddenFsBinding && /\b(?:rm|rmdir|unlink)(?:Sync)?\s*\(/.test(trimmed)) ||
-      /\b(?:std|tokio)::fs::remove_(?:file|dir|dir_all)\s*\(/.test(trimmed);
+      FORBIDDEN_RUST_REMOVE_PATTERN.test(trimmed);
 
     if (isForbidden) {
       findings.push({
@@ -250,6 +253,11 @@ function findForbiddenHardDeleteCallsInFile(rootDir, filePath, source) {
   });
 
   return findings;
+}
+
+function hasForbiddenNodeFsBinding(line) {
+  if (!FORBIDDEN_FS_METHOD_PATTERN.test(line)) return false;
+  return line.includes('"node:fs') || line.includes("'node:fs");
 }
 
 async function walkSourceFiles(directoryPath, onFile) {
