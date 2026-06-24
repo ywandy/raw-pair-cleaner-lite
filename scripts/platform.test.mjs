@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getExecutableSuffixForTarget,
+  getPnpmCommand,
   getTargetConfig,
   getTargetConfigForTriple
 } from "./platform.mjs";
@@ -44,5 +45,11 @@ describe("platform target helpers", () => {
   it("keeps Windows suffix tied to target, not host OS", () => {
     expect(getExecutableSuffixForTarget("x86_64-pc-windows-msvc")).toBe(".exe");
     expect(getExecutableSuffixForTarget("aarch64-apple-darwin")).toBe("");
+  });
+
+  it("uses the Windows command shim for pnpm when spawning without a shell", () => {
+    expect(getPnpmCommand("win32")).toBe("pnpm.cmd");
+    expect(getPnpmCommand("darwin")).toBe("pnpm");
+    expect(getPnpmCommand("linux")).toBe("pnpm");
   });
 });

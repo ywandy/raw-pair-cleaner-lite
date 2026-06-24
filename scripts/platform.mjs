@@ -65,3 +65,7 @@ export function getCurrentTauriTriple() {
 export function getExecutableSuffix() {
   return getTargetConfig().executableSuffix;
 }
+
+export function getPnpmCommand(platform = process.platform) {
+  return platform === "win32" ? "pnpm.cmd" : "pnpm";
+}
