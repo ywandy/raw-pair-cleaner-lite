@@ -13,7 +13,7 @@ describe("Tauri main window sizing", () => {
       height: 720,
       minWidth: 1200,
       minHeight: 720,
-      dragDropEnabled: false
+      dragDropEnabled: true
     });
   });
 });

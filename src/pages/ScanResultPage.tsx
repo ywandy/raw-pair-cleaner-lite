@@ -25,6 +25,7 @@ interface ScanResultPageProps {
   trashCapability: TrashCapability;
   deleteOperation: DeleteOperation;
   checkingTrashCapability: boolean;
+  dragging?: boolean;
   onToggleFile: (path: string) => void;
   onToggleAll: () => void;
   onSetFilesSelected: (paths: string[], selected: boolean) => void;
@@ -53,6 +54,7 @@ export function ScanResultPage({
   trashCapability,
   deleteOperation,
   checkingTrashCapability,
+  dragging,
   onToggleFile,
   onToggleAll,
   onSetFilesSelected,
@@ -101,6 +103,7 @@ export function ScanResultPage({
             directoryMode={scanResult.directoryMode}
             mode={mode}
             scanning={scanning}
+            dragging={dragging}
             onDropFile={onDropFile}
             onBrowse={onBrowse}
             onRescan={onRescan}
@@ -245,6 +248,7 @@ function ResultHeader({
   directoryMode,
   mode,
   scanning,
+  dragging,
   onDropFile,
   onBrowse,
   onRescan
@@ -253,23 +257,25 @@ function ResultHeader({
   directoryMode: DirectoryMode;
   mode: DeleteMode;
   scanning: boolean;
+  dragging?: boolean;
   onDropFile: (file: File) => void;
   onBrowse: () => void;
   onRescan: () => void;
 }) {
-  const [dragging, setDragging] = useState(false);
+  const [localDragging, setLocalDragging] = useState(false);
   const reduced = useReducedMotion();
+  const activeDragging = Boolean(dragging || localDragging);
   const modeLabel = formatCompactDeleteMode(mode);
-  const dropHint = dragging ? "释放后重新扫描" : "拖入目录或选择目录重新扫描";
+  const dropHint = activeDragging ? "释放后重新扫描" : "拖入目录或选择目录重新扫描";
 
   function handleDragOver(event: DragEvent<HTMLElement>): void {
     event.preventDefault();
-    if (!scanning) setDragging(true);
+    if (!scanning) setLocalDragging(true);
   }
 
   function handleDrop(event: DragEvent<HTMLElement>): void {
     event.preventDefault();
-    setDragging(false);
+    setLocalDragging(false);
     if (scanning) return;
     const file = event.dataTransfer.files.item(0);
     if (file) onDropFile(file);
@@ -279,14 +285,14 @@ function ResultHeader({
     <motion.section
       className={[
         "panel-compact flex shrink-0 items-center gap-4 border transition",
-        dragging ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)]",
+        activeDragging ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border)]",
         scanning ? "opacity-75" : "hover:border-[var(--color-primary)]"
       ].join(" ")}
       aria-label="扫描结果顶部工具栏"
       onDragOver={handleDragOver}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={() => setLocalDragging(false)}
       onDrop={handleDrop}
-      animate={{ scale: dragging && !reduced ? 1.004 : 1 }}
+      animate={{ scale: activeDragging && !reduced ? 1.004 : 1 }}
       transition={{ duration: reduced ? 0.01 : 0.18, ease: "easeOut" }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">

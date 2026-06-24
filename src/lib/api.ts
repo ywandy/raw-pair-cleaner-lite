@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 
@@ -52,12 +53,19 @@ interface DesktopApi {
   getSettings: () => Promise<AppSettings>;
   saveSettings: (settings: AppSettings) => Promise<void>;
   getPathForFile: (file: File) => string;
+  onDragDrop: (listener: (event: DesktopDragDropEvent) => void) => () => void;
   getUpdateState: () => Promise<UpdateState>;
   checkForUpdates: () => Promise<UpdateCheckResult>;
   downloadUpdate: () => Promise<void>;
   installUpdate: () => Promise<void>;
   onUpdateProgress: (listener: (progress: UpdateProgress) => void) => () => void;
 }
+
+type DesktopDragDropEvent =
+  | { type: "enter"; paths: string[] }
+  | { type: "over" }
+  | { type: "drop"; paths: string[] }
+  | { type: "leave" };
 
 export const api: DesktopApi = {
   selectDirectory: async (): Promise<string | null> => {
@@ -185,6 +193,43 @@ export const api: DesktopApi = {
     }
 
     return currentBundle.rootPath;
+  },
+
+  onDragDrop: (listener) => {
+    if (!isTauri()) return () => undefined;
+
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+
+    void getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (event.payload.type === "enter") {
+          listener({ type: "enter", paths: event.payload.paths });
+          return;
+        }
+        if (event.payload.type === "drop") {
+          listener({ type: "drop", paths: event.payload.paths });
+          return;
+        }
+        if (event.payload.type === "leave") {
+          listener({ type: "leave" });
+          return;
+        }
+        listener({ type: "over" });
+      })
+      .then((nextUnlisten) => {
+        if (disposed) {
+          nextUnlisten();
+          return;
+        }
+        unlisten = nextUnlisten;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
   },
 
   getUpdateState: async (): Promise<UpdateState> => ({ status: "idle" }),

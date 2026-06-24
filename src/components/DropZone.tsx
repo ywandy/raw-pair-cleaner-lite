@@ -7,40 +7,42 @@ import { getCardPressMotion, getPressMotion } from "./MotionPrimitives";
 interface DropZoneProps {
   rootPath?: string;
   disabled?: boolean;
+  dragging?: boolean;
   onBrowse: () => void;
   onDropFile: (file: File) => void;
 }
 
-export function DropZone({ rootPath, disabled, onBrowse, onDropFile }: DropZoneProps) {
-  const [dragging, setDragging] = useState(false);
+export function DropZone({ rootPath, disabled, dragging, onBrowse, onDropFile }: DropZoneProps) {
+  const [localDragging, setLocalDragging] = useState(false);
   const reduced = useReducedMotion();
+  const activeDragging = Boolean(dragging || localDragging);
 
   return (
     <motion.div
       className={[
         "panel-compact flex min-h-28 items-center gap-4 border-2 border-dashed text-left transition",
-        dragging ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border-strong)]",
+        activeDragging ? "border-[var(--color-primary)] bg-[var(--color-primary-soft)]" : "border-[var(--color-border-strong)]",
         disabled ? "opacity-60" : "hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]"
       ].join(" ")}
       onDragOver={(event) => {
         event.preventDefault();
-        if (!disabled) setDragging(true);
+        if (!disabled) setLocalDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={() => setLocalDragging(false)}
       onDrop={(event) => {
         event.preventDefault();
-        setDragging(false);
+        setLocalDragging(false);
         if (disabled) return;
         const file = event.dataTransfer.files.item(0);
         if (file) onDropFile(file);
       }}
-      animate={{ scale: dragging && !reduced ? 1.006 : 1 }}
+      animate={{ scale: activeDragging && !reduced ? 1.006 : 1 }}
       transition={{ duration: reduced ? 0.01 : 0.18, ease: "easeOut" }}
       {...(!disabled ? getCardPressMotion(reduced) : {})}
     >
       <motion.div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary-soft)] text-[var(--color-primary-strong)]"
-        animate={{ y: dragging && !reduced ? -2 : 0 }}
+        animate={{ y: activeDragging && !reduced ? -2 : 0 }}
         transition={{ duration: reduced ? 0.01 : 0.18, ease: "easeOut" }}
       >
         <UploadCloud className="h-5 w-5" />

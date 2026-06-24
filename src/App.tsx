@@ -41,6 +41,7 @@ export default function App() {
   const [updateState, setUpdateState] = useState<UpdateState>({ status: "idle" });
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [pendingUpdatePrompt, setPendingUpdatePrompt] = useState(false);
+  const [nativeDragging, setNativeDragging] = useState(false);
   const updateBusy = updateState.status === "checking" || updateState.status === "downloading" || updateState.status === "installing";
   const appBusyForUpdatePrompt = scanning || deleting || confirmOpen;
 
@@ -55,6 +56,23 @@ export default function App() {
     });
     return dispose;
   }, []);
+
+  useEffect(() => {
+    return api.onDragDrop((dropEvent) => {
+      if (dropEvent.type === "enter") {
+        setNativeDragging(true);
+        return;
+      }
+      if (dropEvent.type === "leave") {
+        setNativeDragging(false);
+        return;
+      }
+      if (dropEvent.type !== "drop") return;
+
+      setNativeDragging(false);
+      void acceptDroppedPaths(dropEvent.paths);
+    });
+  }, [currentPage, scanning, deleting, confirmOpen, updateState.status, mode, settings.scan]);
 
   useEffect(() => {
     if (!settingsLoaded || !settings.updates.autoCheckOnStartup || !shouldAutoCheck(settings.updates.lastCheckedAt)) return;
@@ -95,24 +113,46 @@ export default function App() {
 
   function acceptDroppedFile(file: File): void {
     const filePath = api.getPathForFile(file);
-    if (!filePath) {
+    acceptDroppedPath(filePath);
+  }
+
+  async function acceptDroppedPaths(paths: string[]): Promise<void> {
+    if (currentPage !== "home" && currentPage !== "scanResult") return;
+    if (scanning || deleting || confirmOpen) return;
+    const path = paths[0];
+    if (currentPage === "scanResult") {
+      await acceptDroppedPathAndScan(path);
+      return;
+    }
+    acceptDroppedPath(path);
+  }
+
+  function acceptDroppedPath(path: string | undefined): void {
+    const nextPath = path?.trim();
+    if (!nextPath) {
       setError("无法读取拖入目录路径，请点击选择目录。");
       return;
     }
-    setRootPath(filePath);
+
+    setRootPath(nextPath);
     setError(undefined);
   }
 
   async function acceptDroppedFileAndScan(file: File): Promise<void> {
     const filePath = api.getPathForFile(file);
-    if (!filePath) {
+    await acceptDroppedPathAndScan(filePath);
+  }
+
+  async function acceptDroppedPathAndScan(path: string | undefined): Promise<void> {
+    const nextPath = path?.trim();
+    if (!nextPath) {
       setError("无法读取拖入目录路径，请点击选择目录。");
       return;
     }
 
-    setRootPath(filePath);
+    setRootPath(nextPath);
     setError(undefined);
-    await startScan({ rootPathOverride: filePath });
+    await startScan({ rootPathOverride: nextPath });
   }
 
   async function startScan(options: { preserveDeleteResult?: boolean; rootPathOverride?: string } = {}): Promise<void> {
@@ -360,6 +400,7 @@ export default function App() {
               onModeChange={setMode}
               onBrowse={() => void browseDirectory()}
               onDropFile={acceptDroppedFile}
+              dragging={nativeDragging}
               onStartScan={() => void startScan()}
             />
           </MotionPage>
@@ -389,6 +430,7 @@ export default function App() {
               onConfirmDelete={() => void confirmDelete()}
               onOpenFileLocation={(filePath) => void openFileLocation(filePath)}
               onDropFile={(file) => void acceptDroppedFileAndScan(file)}
+              dragging={nativeDragging}
               onBrowse={() => void browseDirectoryAndScan()}
               onRescan={() => void startScan()}
               onGoHome={() => setCurrentPage("home")}

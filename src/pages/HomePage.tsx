@@ -15,10 +15,11 @@ interface HomePageProps {
   onModeChange: (mode: DeleteMode) => void;
   onBrowse: () => void;
   onDropFile: (file: File) => void;
+  dragging?: boolean;
   onStartScan: () => void;
 }
 
-export function HomePage({ rootPath, mode, error, scanning, onModeChange, onBrowse, onDropFile, onStartScan }: HomePageProps) {
+export function HomePage({ rootPath, mode, error, scanning, dragging, onModeChange, onBrowse, onDropFile, onStartScan }: HomePageProps) {
   const reduced = useReducedMotion();
 
   return (
@@ -48,7 +49,7 @@ export function HomePage({ rootPath, mode, error, scanning, onModeChange, onBrow
           )}
 
           <MotionItem>
-            <DropZone rootPath={rootPath} disabled={scanning} onBrowse={onBrowse} onDropFile={onDropFile} />
+            <DropZone rootPath={rootPath} disabled={scanning} dragging={dragging} onBrowse={onBrowse} onDropFile={onDropFile} />
           </MotionItem>
           <MotionItem>
             <ModeSelector value={mode} onChange={onModeChange} />
