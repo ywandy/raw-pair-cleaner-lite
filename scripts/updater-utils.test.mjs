@@ -16,7 +16,7 @@ describe("updater latest.json utilities", () => {
     expect(inferUpdaterPlatform("macos/RAW Pair Cleaner_0.1.0-beta.2_x64.app.tar.gz")).toBe("darwin-x86_64");
     expect(inferUpdaterPlatform("macos/RAW Pair Cleaner.app.tar.gz", "darwin", "arm64")).toBe("darwin-aarch64");
     expect(inferUpdaterPlatform("raw-pair-cleaner-lite_0.1.0-beta.2_darwin-aarch64.app.tar.gz", "linux", "x64")).toBe("darwin-aarch64");
-    expect(inferUpdaterPlatform("nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.nsis.zip")).toBe("windows-x86_64");
+    expect(inferUpdaterPlatform("nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.exe")).toBe("windows-x86_64");
     expect(inferUpdaterPlatform("appimage/raw-pair-cleaner-lite_0.1.0-beta.2_amd64.AppImage.tar.gz")).toBe("linux-x86_64");
   });
 
@@ -32,9 +32,9 @@ describe("updater latest.json utilities", () => {
       createReleaseArtifactName({
         version: "0.1.0-beta.2",
         platform: "windows-x86_64",
-        artifactPath: "nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.nsis.zip"
+        artifactPath: "nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.exe"
       })
-    ).toBe("raw-pair-cleaner-lite_0.1.0-beta.2_windows-x86_64.nsis.zip");
+    ).toBe("raw-pair-cleaner-lite_0.1.0-beta.2_windows-x86_64.exe");
   });
 
   it("discovers signed artifacts and builds latest.json without hard-coded filenames", async () => {
@@ -89,12 +89,12 @@ describe("updater latest.json utilities", () => {
         artifacts: [
           {
             platform: "windows-x86_64",
-            relativePath: "nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.nsis.zip",
+            relativePath: "nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.exe",
             signature: "nsis-signature"
           },
           {
             platform: "windows-x86_64",
-            relativePath: "msi/RAW Pair Cleaner_0.1.0-beta.2_x64_en-US.msi.zip",
+            relativePath: "msi/RAW Pair Cleaner_0.1.0-beta.2_x64_en-US.msi",
             signature: "msi-signature"
           }
         ]

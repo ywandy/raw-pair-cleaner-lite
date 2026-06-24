@@ -42,6 +42,11 @@ updater channel. The generated updater artifact is represented in
 `latest.json` as `windows-x86_64`; MSI artifacts are not part of the current
 internal beta update channel.
 
+```txt
+src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.exe
+src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/RAW Pair Cleaner_0.1.0-beta.2_x64-setup.exe.sig
+```
+
 ## Generate latest.json
 
 ```bash

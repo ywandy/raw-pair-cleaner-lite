@@ -115,6 +115,8 @@ function getUpdaterArtifactSuffix(artifactPath) {
     ".AppImage.tar.gz",
     ".nsis.zip",
     ".msi.zip",
+    ".exe",
+    ".msi",
     ".tar.gz",
     ".zip"
   ];
